@@ -25,4 +25,5 @@ public interface IUserService extends IService<User> {
     public Result loginSys(LoginFormDTO loginForm, HttpSession session);
 
     public User creatUserWithPhone(String phone);
+    public Result me();
 }

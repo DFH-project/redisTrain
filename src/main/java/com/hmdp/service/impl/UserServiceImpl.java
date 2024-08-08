@@ -1,14 +1,17 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.LoginFormDTO;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.User;
 import com.hmdp.mapper.UserMapper;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.RegexUtils;
 import com.hmdp.utils.StringUtils;
+import com.hmdp.utils.UserHolder;
 import io.netty.util.internal.StringUtil;
 import org.springframework.stereotype.Service;
 
@@ -62,7 +65,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             one = creatUserWithPhone(phone);
         }
         // 保存用户到session
-        session.setAttribute("user",one);
+        session.setAttribute("user", BeanUtil.copyProperties(one, UserDTO.class));
         return Result.ok();
     }
 
@@ -73,5 +76,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         one.setNickName(USER_NICK_NAME_PREFIX+RandomUtil.randomString(5));
         save(one);
         return one;
+    }
+
+    @Override
+    public Result me() {
+        // 获取当前登录用户并返回
+        UserDTO userDTO = UserHolder.getUser();
+        if (StringUtils.isNull(userDTO)){
+            return Result.fail("用户未登录");
+        }
+        return Result.ok(userDTO);
     }
 }
