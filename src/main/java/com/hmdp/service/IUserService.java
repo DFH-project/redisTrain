@@ -26,4 +26,6 @@ public interface IUserService extends IService<User> {
 
     public User creatUserWithPhone(String phone);
     public Result me();
+
+    public Result logout();
 }
