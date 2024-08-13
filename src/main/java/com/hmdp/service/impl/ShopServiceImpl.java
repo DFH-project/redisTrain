@@ -9,6 +9,7 @@ import com.hmdp.entity.Shop;
 import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.hmdp.utils.RedisData;
 import com.hmdp.utils.StringUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
+import java.time.LocalDateTime;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.*;
@@ -153,5 +158,67 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         }
         return shopSelect;
     }
+
+
+    public void saveRedisData(Long id,Long seconds){
+        // 获取数据
+        Shop shop = getById(id);
+        // 数据存储
+        RedisData redisData=new RedisData();
+        redisData.setData(shop);
+        redisData.setExpireTime(LocalDateTime.now().plusSeconds(seconds));
+        // redis 存储
+        stringRedisTemplate.opsForValue().set( LOCK_SHOP_KEY + id,JSONUtil.toJsonStr(redisData));
+    }
+
+    // 定义一个线程池
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+
+
+    /***
+     * 逻辑过期解决缓存击穿
+     * @param id
+     * @return
+     */
+    public Shop queryWithLogicalExpire(Long id) {
+        String key = CACHE_SHOP_KEY + id ;
+        String lockKey = LOCK_SHOP_KEY + id;
+        // 1 先从redis 缓存中查询数据
+        String s = stringRedisTemplate.opsForValue().get(key);
+        // 2。 判断是否存在
+        if (StringUtils.isEmpty(s)) {
+            // 3. 默认是不会过期，所以未命中返回null
+            return null;
+        }
+
+        // 判断缓存是否过期
+        RedisData redisData=BeanUtil.toBean(s,RedisData.class);
+        Shop shop = (Shop) redisData.getData();
+        LocalDateTime expireTime = redisData.getExpireTime();
+        if (expireTime.isAfter(LocalDateTime.now())){
+            // 过期时间在当前时间之后，证明未过期
+            return shop;
+        }
+        // 过期 需要重建缓存
+        // 获取锁
+        boolean b = tryLock(lockKey);
+        if (b){
+            // 成功则开启独立线程
+            Thread t1 = new Thread();
+            CACHE_REBUILD_EXECUTOR.submit(()->{
+                try {
+                    saveRedisData(id , 10L);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                } finally {
+                    // 释放锁
+                    unLock(lockKey);
+                }
+            });
+        }
+        return shop;
+
+    }
+
 
 }
