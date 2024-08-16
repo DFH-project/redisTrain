@@ -204,7 +204,6 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         boolean b = tryLock(lockKey);
         if (b){
             // 成功则开启独立线程
-            Thread t1 = new Thread();
             CACHE_REBUILD_EXECUTOR.submit(()->{
                 try {
                     saveRedisData(id , 10L);
@@ -219,6 +218,4 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         return shop;
 
     }
-
-
 }
