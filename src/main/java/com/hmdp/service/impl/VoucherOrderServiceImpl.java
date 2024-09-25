@@ -48,18 +48,26 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         LocalDateTime now = LocalDateTime.now();
         if ( now .isBefore(beginTime) || now.isAfter(endTime)) return Result.fail("不在活动时间范围内！");
 
+        //一人一单
+        Long userId = UserHolder.getUser().getId();
+        int count = query().eq("user_id", userId).eq("voucher_id", id).count();
+        if (count>0){
+            return Result.fail(" 已经购买过了哦~");
+        }
+
         // 判断库存
         if (seckillVoucher.getStock() < 1 ) return Result.fail("库存不足！");
 
-        // 扣减库存
-        seckillVoucherService.update().setSql("stock = stock -1 ").eq("voucher_id",id ).gt("stock" ,0 ).update();
+        // 扣减库存     乐观锁 实现：.eq("stock",seckillVoucher.getStock())
+        seckillVoucherService.update().setSql("stock = stock -1 ").eq("voucher_id",id )
+                .gt("stock" ,0 ).update();
 
         // 创建订单
         VoucherOrder order = new VoucherOrder();
         long orderId = redisIDWorker.nextId("order");
         order.setId(orderId);
         order.setVoucherId(id);
-        order.setUserId(UserHolder.getUser().getId());
+        order.setUserId(userId);
         save(order);
 
         return Result.ok();
