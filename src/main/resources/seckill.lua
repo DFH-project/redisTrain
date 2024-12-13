@@ -19,7 +19,7 @@ if(redis.call('sismember',orderKey,userId)==1) then
     -- 存在 说明重复下单
     return 2
 end
--- 扣库存、保存用户
+-- 扣库存、保存用户 1
 redis.call('incrby',stockKey,-1)
 redis.call('sadd',orderKey,userId)
 
