@@ -56,7 +56,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         LocalDateTime beginTime = seckillVoucher.getBeginTime();
         LocalDateTime endTime = seckillVoucher.getEndTime();
         LocalDateTime now = LocalDateTime.now();
-        if ( now .isBefore(beginTime) || now.isAfter(endTime)) return Result.fail("不在活动时间范围内！");
+        if ( now .isBefore(beginTime) || now.isAfter(endTime))  return Result.fail("不在活动时间范围内！");
 
         // 判断库存
         if (seckillVoucher.getStock() < 1 ) return Result.fail("库存不足！");
