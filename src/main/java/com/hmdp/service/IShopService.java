@@ -20,4 +20,5 @@ public interface IShopService extends IService<Shop> {
     public Result updateData(Shop shop);
 
 
+    Object queryShopByType(Integer typeId, Integer current, Double x, Double y);
 }
